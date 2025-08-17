@@ -10,6 +10,7 @@ import argparse
 import csv
 import json
 import os
+import traceback
 from zipfile import ZipFile
 
 from app.hairball3.mastery import Mastery
@@ -134,11 +135,16 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
             if fname in processed:
                 continue
             path = os.path.join(input_dir, fname)
-            metrics = analyze_file(path, DEFAULT_SKILL_POINTS)
-            row = flatten_metrics(fname, metrics)
-            writer.writerow(row)
-            processed.add(fname)
-            save_progress(progress_path, processed)
+            try:
+                metrics = analyze_file(path, DEFAULT_SKILL_POINTS)
+                row = flatten_metrics(fname, metrics)
+                writer.writerow(row)
+                processed.add(fname)
+                save_progress(progress_path, processed)
+            except Exception as exc:
+                print(f"Error processing {fname}: {exc}")
+                traceback.print_exc()
+                continue
 
 
 def main() -> None:
