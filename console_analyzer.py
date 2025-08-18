@@ -11,6 +11,7 @@ import csv
 import json
 import os
 import contextlib
+
 from zipfile import ZipFile
 
 from app.hairball3.mastery import Mastery
@@ -68,9 +69,7 @@ def analyze_file(path: str, skill_points: dict) -> dict:
         'backdropNaming': backdrop,
     }
 
-
 def flatten_metrics(project_name: str, metrics: dict) -> dict:
-    """Flatten nested metrics into a row suitable for CSV writing."""
     row = {'project': project_name}
     mastery = metrics['mastery']
     row['mastery_total_points'] = mastery['total_points'][0]
@@ -78,7 +77,6 @@ def flatten_metrics(project_name: str, metrics: dict) -> dict:
     row['mastery_competence'] = mastery['competence']
     for skill in DEFAULT_SKILL_POINTS:
         if skill in mastery:
-            # keep only the numeric score for each competence without a prefix
             row[skill] = mastery[skill][0]
     dup = metrics['duplicateScript']
     row['duplicateScripts'] = dup['total_duplicate_scripts']
@@ -91,7 +89,6 @@ def flatten_metrics(project_name: str, metrics: dict) -> dict:
     babia = metrics['babia']
     row['babia_num_sprites'] = babia.get('num_sprites', 0)
     return row
-
 
 def load_progress(path: str) -> set:
     """Load processed file names from the progress file."""
@@ -141,8 +138,10 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
                 writer.writerow(row)
                 processed.add(fname)
                 save_progress(progress_path, processed)
+                project_id = os.path.splitext(fname)[0]
                 print(f"{project_id},OK")
             except Exception as exc:
+                project_id = os.path.splitext(fname)[0]
                 print(f"{project_id},NOK,{exc}")
                 continue
 
