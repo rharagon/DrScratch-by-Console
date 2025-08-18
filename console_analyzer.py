@@ -10,6 +10,8 @@ import argparse
 import csv
 import json
 import os
+import contextlib
+
 from zipfile import ZipFile
 
 from app.hairball3.mastery import Mastery
@@ -126,8 +128,12 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
             if fname in processed:
                 continue
             path = os.path.join(input_dir, fname)
+            project_id = os.path.splitext(fname)[0]
             try:
-                metrics = analyze_file(path, DEFAULT_SKILL_POINTS)
+                with open(os.devnull, 'w') as devnull, \
+                     contextlib.redirect_stdout(devnull), \
+                     contextlib.redirect_stderr(devnull):
+                    metrics = analyze_file(path, DEFAULT_SKILL_POINTS)
                 row = flatten_metrics(fname, metrics)
                 writer.writerow(row)
                 processed.add(fname)
