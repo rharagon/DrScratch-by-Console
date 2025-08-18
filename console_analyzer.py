@@ -10,7 +10,6 @@ import argparse
 import csv
 import json
 import os
-import traceback
 from zipfile import ZipFile
 
 from app.hairball3.mastery import Mastery
@@ -78,22 +77,18 @@ def flatten_metrics(project_name: str, metrics: dict) -> dict:
     row['mastery_competence'] = mastery['competence']
     for skill in DEFAULT_SKILL_POINTS:
         if skill in mastery:
-            row[f'mastery_{skill}'] = mastery[skill][0]
+            # keep only the numeric score for each competence without a prefix
+            row[skill] = mastery[skill][0]
     dup = metrics['duplicateScript']
     row['duplicateScripts'] = dup['total_duplicate_scripts']
-    row['duplicateScripts_list'] = json.dumps(dup['list_duplicate_scripts'])
     dead = metrics['deadCode']
     row['deadCode'] = dead['total_dead_code_scripts']
-    row['deadCode_scripts'] = json.dumps(dead['list_dead_code_scripts'])
     sprite = metrics['spriteNaming']
     row['spriteNaming'] = sprite['number']
-    row['spriteNaming_list'] = '|'.join(sprite.get('sprite', []))
     backdrop = metrics['backdropNaming']
     row['backdropNaming'] = backdrop['number']
-    row['backdropNaming_list'] = '|'.join(backdrop.get('backdrop', []))
     babia = metrics['babia']
     row['babia_num_sprites'] = babia.get('num_sprites', 0)
-    row['babia_sprites'] = json.dumps(babia.get('sprites', {}))
     return row
 
 
@@ -116,13 +111,13 @@ def save_progress(path: str, processed: set) -> None:
 
 def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None:
     processed = load_progress(progress_path)
-    fieldnames = ['project', 'mastery_total_points', 'mastery_total_max',
-                  'mastery_competence'] + [f'mastery_{s}' for s in DEFAULT_SKILL_POINTS]
-    fieldnames += ['duplicateScripts', 'duplicateScripts_list',
-                   'deadCode', 'deadCode_scripts',
-                   'spriteNaming', 'spriteNaming_list',
-                   'backdropNaming', 'backdropNaming_list',
-                   'babia_num_sprites', 'babia_sprites']
+    fieldnames = [
+        'project', 'mastery_total_points', 'mastery_total_max', 'mastery_competence',
+        'Abstraction', 'Parallelization', 'Logic', 'Synchronization', 'FlowControl',
+        'UserInteractivity', 'DataRepresentation', 'MathOperators', 'MotionOperators',
+        'duplicateScripts', 'deadCode', 'spriteNaming', 'backdropNaming',
+        'babia_num_sprites'
+    ]
 
     os.makedirs(os.path.dirname(csv_path) or '.', exist_ok=True)
     csv_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
@@ -141,9 +136,11 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
                 writer.writerow(row)
                 processed.add(fname)
                 save_progress(progress_path, processed)
+                project_id = os.path.splitext(fname)[0]
+                print(f"{project_id},OK")
             except Exception as exc:
-                print(f"Error processing {fname}: {exc}")
-                traceback.print_exc()
+                project_id = os.path.splitext(fname)[0]
+                print(f"{project_id},NOK,{exc}")
                 continue
 
 
