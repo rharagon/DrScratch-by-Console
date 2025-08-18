@@ -10,7 +10,6 @@ import argparse
 import csv
 import json
 import os
-import traceback
 from zipfile import ZipFile
 
 from app.hairball3.mastery import Mastery
@@ -76,8 +75,7 @@ def flatten_metrics(project_name: str, metrics: dict) -> dict:
     row['mastery_competence'] = mastery['competence']
     for skill in DEFAULT_SKILL_POINTS:
         if skill in mastery:
-            row[skill] = mastery[skill][0]          # sin prefijo mastery_
-
+            row[skill] = mastery[skill][0]
     dup = metrics['duplicateScript']
     row['duplicateScripts'] = dup['total_duplicate_scripts']
     dead = metrics['deadCode']
@@ -109,11 +107,13 @@ def save_progress(path: str, processed: set) -> None:
 
 def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None:
     processed = load_progress(progress_path)
-    fieldnames = ['project', 'mastery_total_points', 'mastery_total_max',
-                  'mastery_competence'] + [f'{s}' for s in DEFAULT_SKILL_POINTS]
-    fieldnames += ['duplicateScripts', 'deadCode', 
-                   'spriteNaming', 'backdropNaming', 
-                   'babia_num_sprites']
+    fieldnames = [
+        'project', 'mastery_total_points', 'mastery_total_max', 'mastery_competence',
+        'Abstraction', 'Parallelization', 'Logic', 'Synchronization', 'FlowControl',
+        'UserInteractivity', 'DataRepresentation', 'MathOperators', 'MotionOperators',
+        'duplicateScripts', 'deadCode', 'spriteNaming', 'backdropNaming',
+        'babia_num_sprites'
+    ]
 
     os.makedirs(os.path.dirname(csv_path) or '.', exist_ok=True)
     csv_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
@@ -132,9 +132,11 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
                 writer.writerow(row)
                 processed.add(fname)
                 save_progress(progress_path, processed)
+                project_id = os.path.splitext(fname)[0]
+                print(f"{project_id},OK")
             except Exception as exc:
-                print(f"Error processing {fname}: {exc}")
-                traceback.print_exc()
+                project_id = os.path.splitext(fname)[0]
+                print(f"{project_id},NOK,{exc}")
                 continue
 
 
