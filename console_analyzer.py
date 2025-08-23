@@ -72,6 +72,7 @@ def analyze_file(path: str, skill_points: dict) -> dict:
 def flatten_metrics(project_name: str, metrics: dict) -> dict:
     row = {'project': project_name}
     mastery = metrics['mastery']
+    row['total_blocks'] = mastery.get('total_blocks', 0)
     row['mastery_total_points'] = mastery['total_points'][0]
     row['mastery_total_max'] = mastery['total_points'][1]
     row['mastery_competence'] = mastery['competence']
@@ -109,13 +110,11 @@ def save_progress(path: str, processed: set) -> None:
 
 def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None:
     processed = load_progress(progress_path)
-    fieldnames = [
-        'project', 'mastery_total_points', 'mastery_total_max', 'mastery_competence',
-        'Abstraction', 'Parallelization', 'Logic', 'Synchronization', 'FlowControl',
-        'UserInteractivity', 'DataRepresentation', 'MathOperators', 'MotionOperators',
-        'duplicateScripts', 'deadCode', 'spriteNaming', 'backdropNaming',
-        'babia_num_sprites'
-    ]
+    fieldnames = ['project', 'total_blocks', 'mastery_total_points', 'mastery_total_max',
+                  'mastery_competence'] + [f'{s}' for s in DEFAULT_SKILL_POINTS]
+    fieldnames += ['duplicateScripts', 'deadCode', 
+                   'spriteNaming', 'backdropNaming', 
+                   'babia_num_sprites']
 
     os.makedirs(os.path.dirname(csv_path) or '.', exist_ok=True)
     csv_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
@@ -128,7 +127,6 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
             if fname in processed:
                 continue
             path = os.path.join(input_dir, fname)
-            project_id = os.path.splitext(fname)[0]
             try:
                 with open(os.devnull, 'w') as devnull, \
                      contextlib.redirect_stdout(devnull), \
@@ -141,6 +139,8 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
                 project_id = os.path.splitext(fname)[0]
                 print(f"{project_id},OK")
             except Exception as exc:
+                # print(f"Error processing {fname}: {exc}")
+                # traceback.print_exc()
                 project_id = os.path.splitext(fname)[0]
                 print(f"{project_id},NOK,{exc}")
                 continue
