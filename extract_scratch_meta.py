@@ -1,4 +1,3 @@
-
 import argparse
 import csv
 import json
@@ -54,8 +53,9 @@ def fetch_project_metadata(project_id: int, timeout: float = 15.0, retries: int 
             history = data.get("history") or {}
             creation_date = history.get("created")
             modified_date = history.get("modified")
-            remix_parent_id = data.get("parent")
-            remix_root_id = data.get("root")
+            remix = data.get("remix") or {}
+            remix_parent_id = remix.get("parent")
+            remix_root_id = remix.get("root")
             title = data.get("title")
 
             return {
