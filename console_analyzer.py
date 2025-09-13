@@ -11,6 +11,7 @@ import csv
 import json
 import os
 import contextlib
+from tqdm import tqdm
 
 from zipfile import ZipFile
 
@@ -118,32 +119,43 @@ def analyze_directory(input_dir: str, csv_path: str, progress_path: str) -> None
 
     os.makedirs(os.path.dirname(csv_path) or '.', exist_ok=True)
     csv_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
+    error_rows = []
+    files = sorted(f for f in os.listdir(input_dir) if f.endswith('.sb3'))
+    total_files = len([f for f in files if f not in processed])
     with open(csv_path, 'a', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not csv_exists:
             writer.writeheader()
-        files = sorted(f for f in os.listdir(input_dir) if f.endswith('.sb3'))
-        for fname in files:
-            if fname in processed:
-                continue
-            path = os.path.join(input_dir, fname)
-            try:
-                with open(os.devnull, 'w') as devnull, \
-                     contextlib.redirect_stdout(devnull), \
-                     contextlib.redirect_stderr(devnull):
-                    metrics = analyze_file(path, DEFAULT_SKILL_POINTS)
-                row = flatten_metrics(fname, metrics)
-                writer.writerow(row)
-                processed.add(fname)
-                save_progress(progress_path, processed)
-                project_id = os.path.splitext(fname)[0]
-                print(f"{project_id},OK")
-            except Exception as exc:
-                # print(f"Error processing {fname}: {exc}")
-                # traceback.print_exc()
-                project_id = os.path.splitext(fname)[0]
-                print(f"{project_id},NOK,{exc}")
-                continue
+        with tqdm(total=total_files, desc='Analizando proyectos', ncols=80) as pbar:
+            for fname in files:
+                if fname in processed:
+                    continue
+                path = os.path.join(input_dir, fname)
+                try:
+                    with open(os.devnull, 'w') as devnull, \
+                         contextlib.redirect_stdout(devnull), \
+                         contextlib.redirect_stderr(devnull):
+                        metrics = analyze_file(path, DEFAULT_SKILL_POINTS)
+                    row = flatten_metrics(fname, metrics)
+                    writer.writerow(row)
+                    processed.add(fname)
+                    save_progress(progress_path, processed)
+                    project_id = os.path.splitext(fname)[0]
+                    # Solo barra de progreso, sin print
+                except Exception as exc:
+                    project_id = os.path.splitext(fname)[0]
+                    error_rows.append({'project_id': project_id, 'error': str(exc)})
+                    # Solo barra de progreso, sin print
+                pbar.update(1)
+    # Guardar errores en un CSV aparte si hay errores
+    if error_rows:
+        error_csv = os.path.splitext(csv_path)[0] + '_errores.csv'
+        with open(error_csv, 'w', newline='', encoding='utf-8') as ferr:
+            writer = csv.DictWriter(ferr, fieldnames=['project_id', 'error'])
+            writer.writeheader()
+            for err in error_rows:
+                writer.writerow(err)
+    # Mensaje solo en archivo, no en consola
 
 
 def main() -> None:
